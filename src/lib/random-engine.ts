@@ -126,5 +126,35 @@ export function generateRandomMeal(
      }
   }
 
+  // Strategy 3: Exhaustive/Cheapest Fallback (if random failed due to budget)
+  // Sort by price ascending and try to pick the cheapest valid combo
+  const sortedMains = [...mainDishes].sort((a, b) => (a.price || 0) - (b.price || 0));
+  const sortedSides = [...sideDishes].sort((a, b) => (a.price || 0) - (b.price || 0));
+  
+  // Try simplest greedy approach: Pick cheapest needed amount
+  const cheapestMains = sortedMains.slice(0, mainDishCount);
+  const cheapestSides = sortedSides.slice(0, sideDishCount);
+  
+  // Check if even the cheapest combo violates strict rules (we likely want to relax rules here too if we are desperate)
+  // Let's try Strict first with cheapest
+  if (isValidCombo(cheapestMains, cheapestSides, true, true)) {
+     const selected = [...cheapestMains, ...cheapestSides];
+     return {
+         foods: selected,
+         totalPrice: selected.reduce((s, f) => s + (f.price || 0), 0),
+         relaxedInfo: ['Đã chọn combo rẻ nhất để phù hợp ngân sách']
+     };
+  }
+  
+  // If strict cheapest fails, try Relaxed Cheapest
+  if (isValidCombo(cheapestMains, cheapestSides, false, false)) {
+      const selected = [...cheapestMains, ...cheapestSides];
+      return {
+          foods: selected,
+          totalPrice: selected.reduce((s, f) => s + (f.price || 0), 0),
+          relaxedInfo: ['Đã chọn combo rẻ nhất và bỏ qua các quy tắc lịch sử']
+      };
+  }
+
   return null;
 }

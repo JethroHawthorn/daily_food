@@ -8,6 +8,9 @@ import { redirect } from 'next/navigation';
 export async function randomMeal(formData: FormData) {
   const budget = Number(formData.get('budget')) || 70000;
   
+  const mainDishCount = Number(formData.get('main_dish_count')) || 1;
+  const sideDishCount = Number(formData.get('side_dish_count')) || 1;
+  
   // 1. Fetch data
   const foods = await getAllFoods();
   const history = await getMealHistory(7);
@@ -15,8 +18,8 @@ export async function randomMeal(formData: FormData) {
   // 2. Run Engine
   const result = generateRandomMeal(foods, history, {
     budget,
-    mainDishCount: 1,
-    sideDishCount: 1
+    mainDishCount,
+    sideDishCount
   });
   
   return result;
