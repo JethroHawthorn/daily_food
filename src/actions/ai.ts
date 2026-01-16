@@ -111,3 +111,62 @@ Rules:
     return [];
   }
 }
+
+export async function replaceDish(
+  targetDish: Food,
+  currentMeal: Food[],
+  budget: number,
+  avoidTags: string[] = [],
+  recentMainDishIds: number[] = []
+) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("Chưa cấu hình API Key cho AI.");
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-flash-latest",
+      generationConfig: { responseMimeType: "application/json" }
+    });
+
+    const prompt = `
+You are a Vietnamese food replacement assistant.
+
+Strict rules:
+- Replace ONLY the target dish
+- Do NOT modify other dishes
+- Do NOT exceed remainingBudget
+- Suggest dishes with the SAME type as target dish
+- Avoid dishes with tags listed in avoidTags
+- Avoid dishes appearing in recentMainDishIds
+- Choose common Vietnamese home meals
+- Do NOT explain anything
+- Output ONLY valid JSON of the single replacement dish
+
+Context:
+- Target Dish to Replace: ${JSON.stringify(targetDish)}
+- Current Meal: ${JSON.stringify(currentMeal.map(f => ({ name: f.name, price: f.price })))}
+- Total Budget: ${budget}
+- Remaining Budget for this dish (approx): ${budget - currentMeal.filter(f => f.id !== targetDish.id).reduce((s, f) => s + (f.price || 0), 0)}
+- Avoid Tags: ${JSON.stringify(avoidTags)}
+- Recent Main Dish IDs (avoid names if possible): ${JSON.stringify(recentMainDishIds)}
+
+Output JSON Structure:
+{
+  "name": "string",
+  "type": "${targetDish.type}",
+  "price": number,
+  "tags": "string",
+  "image": null
+}
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const cleanText = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error("Gemini Replace Error:", error);
+    return null;
+  }
+}

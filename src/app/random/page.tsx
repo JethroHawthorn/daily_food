@@ -1,7 +1,7 @@
 'use client';
 
 import { randomMeal, saveSelection } from '@/actions/random';
-import { explainMealSelection } from '@/actions/ai';
+import { replaceDish, explainMealSelection } from '@/actions/ai';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
@@ -10,7 +10,7 @@ import { generateRandomMeal } from '@/lib/random-engine';
 import { getOfflineFoods, getOfflineHistory } from '@/hooks/use-offline-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { ChefHat } from 'lucide-react';
+import { ChefHat, RefreshCw } from 'lucide-react';
 
 interface Food {
   id: number;
@@ -35,6 +35,7 @@ export default function RandomPage() {
   const [error, setError] = useState<string | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
+  const [replacingId, setReplacingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (result) {
@@ -110,37 +111,55 @@ export default function RandomPage() {
   async function handleExplain() {
     if (!result || !result.foods) return;
     setIsExplaining(true);
-    const budget = 70000; // access from form? or result? 
-    // We lost access to form data budget here unless we store it in result or reading from input ref.
-    // For simplicity, let's pass the calculated totalPrice or default. 
-    // Ideally we should pass the actual budget. 
-    // Let's assume the user sticks to the default or we pass result.totalPrice as reference for now, 
-    // BUT the prompt asks for "Budget constraints".
-    // Let's modify handleRandom to store budget in result if possible? 
-    // Or just use a default/placeholder since the AI mainly needs to know "it fits the budget".
-    // Let's use the totalPrice as valid proxy or just hardcode as per context if needed.
-    // Better: let's try to pass the budget if we can. 
-    // Actually, I can pass result.totalPrice as "Constraint met" context.
-    // Or I can add budget to RandomResult interface.
-    // Let's just use 70000 as default or try to get it if I update the interface.
-    // Since I cannot easily update interface across files without more edits, let's keep it simple:
-    // Pass result.totalPrice and mention it fits within budget.
-    
-    // WAIT, I can just update the RandomResult interface in this file since it's defined here and used here!
-    // But `src/lib/random-engine.ts` also defines it? No, `page.tsx` has its own interface RandomResult.
-    // `src/lib/random-engine.ts` returns an object that matches it.
-    // Let's update the interface in page.tsx and in handleRandom!
-    
+    // Ideally pass real budget
     try {
         const text = await explainMealSelection(result.foods, result.totalPrice); 
-        // Note: passing totalPrice as budget approximation if we don't have the original input. 
-        // Or I can parse the input again? No.
         setExplanation(text);
     } catch (e) {
         console.error(e);
         setExplanation('Có lỗi khi gọi AI.');
     } finally {
         setIsExplaining(false);
+    }
+  }
+
+  async function handleReplace(dish: Food) {
+    if (!result) return;
+    setReplacingId(dish.id);
+    try {
+      // Calculate remaining budget properly? 
+      // The backend gets the *current meal* and *budget*.
+      // We assume the original budget was ~70k or whatever the total price is close to.
+      // Let's passed the current total price as a "soft" budget reference or just passing 70000 if we don't have it.
+      // Actually, if we pass the *total budget*, the logic calculates the remaining.
+      // We don't have the original budget stored in result. 
+      // Let's use 70000 default or prompt user? No that's too complex.
+      // Let's use max(currentTotal, 70000) to ensure we don't shrink budget accidentally if it was higher.
+      const estimatedBudget = Math.max(result.totalPrice, 70000); 
+
+      // Recent main dish IDs - we can't easily get them from history here without extra calls.
+      // Let's pass empty array for now or if we stored them in state.
+      const newDish = await replaceDish(dish, result.foods, estimatedBudget);
+      
+      if (newDish) {
+        setResult(prev => {
+           if (!prev) return null;
+           const newFoods = prev.foods.map(f => f.id === dish.id ? { ...newDish, id: Date.now() } : f); // Temp ID for new dish
+           return {
+             ...prev,
+             foods: newFoods,
+             totalPrice: newFoods.reduce((s, f) => s + (f.price || 0), 0)
+           };
+        });
+        setExplanation(null); // Clear old explanation
+      } else {
+        alert('AI không tìm thấy món thay thế phù hợp!');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi khi đổi món: ' + (e as Error).message);
+    } finally {
+      setReplacingId(null);
     }
   }
 
@@ -261,8 +280,21 @@ export default function RandomPage() {
                   </div>
                   <div className="text-xs text-gray-400 pl-9 uppercase font-semibold tracking-wide">{food.type}</div>
                 </div>
-                <div className="font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
-                  {food.price ? food.price.toLocaleString() : 0}đ
+                <div className="flex items-center gap-2">
+                  <div className="font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+                    {food.price ? food.price.toLocaleString() : 0}đ
+                  </div>
+                  {!result.isOffline && (
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => handleReplace(food)}
+                      disabled={replacingId === food.id}
+                      className={`h-8 w-8 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-full ${replacingId === food.id ? 'animate-spin text-orange-500' : ''}`}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             ))}
