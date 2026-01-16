@@ -10,7 +10,7 @@ import { generateRandomMeal } from '@/lib/random-engine';
 import { getOfflineFoods, getOfflineHistory } from '@/hooks/use-offline-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { ChefHat, RefreshCw } from 'lucide-react';
+import { ChefHat, RefreshCw, Loader2 } from 'lucide-react';
 
 interface Food {
   id: number;
@@ -31,7 +31,6 @@ interface RandomResult {
 export default function RandomPage() {
   const [result, setResult] = useState<RandomResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [cooking, setCooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
@@ -53,7 +52,6 @@ export default function RandomPage() {
 
   async function handleRandom(formData: FormData) {
     setLoading(true);
-    setCooking(true);
     setError(null);
     setResult(null);
     setExplanation(null);
@@ -93,7 +91,6 @@ export default function RandomPage() {
         }
       }
     } finally {
-      setCooking(false);
       setLoading(false);
     }
   }
@@ -106,6 +103,12 @@ export default function RandomPage() {
       console.error('Save failed', e);
       alert('Không thể lưu khi mất mạng (tính năng lưu offline chưa hỗ trợ).');
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    await handleRandom(formData);
   }
 
   async function handleExplain() {
@@ -127,14 +130,6 @@ export default function RandomPage() {
     if (!result) return;
     setReplacingId(dish.id);
     try {
-      // Calculate remaining budget properly? 
-      // The backend gets the *current meal* and *budget*.
-      // We assume the original budget was ~70k or whatever the total price is close to.
-      // Let's passed the current total price as a "soft" budget reference or just passing 70000 if we don't have it.
-      // Actually, if we pass the *total budget*, the logic calculates the remaining.
-      // We don't have the original budget stored in result. 
-      // Let's use 70000 default or prompt user? No that's too complex.
-      // Let's use max(currentTotal, 70000) to ensure we don't shrink budget accidentally if it was higher.
       const estimatedBudget = Math.max(result.totalPrice, 70000); 
 
       // Recent main dish IDs - we can't easily get them from history here without extra calls.
@@ -166,32 +161,14 @@ export default function RandomPage() {
   return (
     <div className="container mx-auto p-4 max-w-md min-h-screen flex flex-col">
       <h1 className="text-2xl font-bold mb-6 text-center text-orange-950">
-        {cooking ? 'Đang nấu nướng...' : '🎲 Random Món'}
+        {loading ? 'Đang chọn món...' : '🎲 Random Món'}
       </h1>
 
       <AnimatePresence mode='wait'>
-        {cooking ? (
-          <motion.div 
-            key="cooking"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center space-y-4"
-          >
-            <motion.div
-              animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="text-6xl"
-            >
-              🥘
-            </motion.div>
-            <p className="text-orange-600 font-medium animate-pulse">Đang chọn nguyên liệu...</p>
-          </motion.div>
-        ) : (
-          !result && (
+          {!result && (
             <motion.form 
               key="form"
-              action={handleRandom} 
+              onSubmit={handleSubmit} 
               className="space-y-6 mb-8 bg-white p-6 rounded-2xl shadow-sm border border-orange-100"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -222,15 +199,18 @@ export default function RandomPage() {
                 </div>
               </div>
               <Button type="submit" className="w-full h-14 text-xl font-bold bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-200 rounded-xl transition-all active:scale-95" disabled={loading}>
-                <ChefHat className="mr-2 w-6 h-6" />
-                QUAY NGAY
+                {loading ? (
+                    <Loader2 className="mr-2 w-6 h-6 animate-spin" />
+                ) : (
+                    <ChefHat className="mr-2 w-6 h-6" />
+                )}
+                {loading ? 'ĐANG CHỌN...' : 'QUAY NGAY'}
               </Button>
             </motion.form>
-          )
-        )}
+          )}
       </AnimatePresence>
 
-      {error && !cooking && (
+      {error && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="p-4 bg-red-50 text-red-600 rounded-xl mb-4 text-center font-medium border border-red-100"
@@ -240,7 +220,7 @@ export default function RandomPage() {
       )}
 
       <AnimatePresence>
-      {result && !cooking && (
+      {result && (
         <motion.div 
           initial={{ opacity: 0, scale: 0.8, rotate: -2 }} 
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
@@ -358,7 +338,7 @@ export default function RandomPage() {
       )}
       </AnimatePresence>
       
-      {!result && !cooking && (
+      {!result && (
         <div className="mt-8 text-center">
             <Link href="/">
               <Button variant="outline">🏠 Về Trang Chủ</Button>
