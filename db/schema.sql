@@ -12,3 +12,8 @@ CREATE TABLE IF NOT EXISTS meal_history (
   date TEXT NOT NULL,
   food_ids TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS daily_checkins (
+  date TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('FOLLOWED', 'NOT_FOLLOWED'))
+);

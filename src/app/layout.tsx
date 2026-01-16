@@ -1,6 +1,7 @@
 import { Nunito } from "next/font/google";
 import "./globals.css";
 import { OfflineSync } from "@/components/offline-sync";
+import DailyCheckIn from "@/components/daily-check-in";
 
 const nunito = Nunito({
   subsets: ["latin", "vietnamese"],
@@ -40,6 +41,7 @@ export default function RootLayout({
         className={`${nunito.variable} antialiased font-sans`}
       >
         <OfflineSync />
+        <DailyCheckIn />
         {children}
       </body>
     </html>
