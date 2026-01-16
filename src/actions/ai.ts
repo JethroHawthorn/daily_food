@@ -45,21 +45,28 @@ export async function explainMealSelection(selectedFoods: Food[], budget: number
     // "Context: User meal history (7 days), Today selected dishes, Budget constraints"
     
     const prompt = `
-You are a food assistant "Food Daily".
+You are a supportive Vietnamese food assistant for a daily meal planning app.
+
+Core principles:
+- You ONLY explain based on provided data.
+- The app logic has already selected the dishes.
+
+Strict rules:
+- Do NOT give medical or health advice.
+- Do NOT judge, criticize, or pressure the user.
+- Keep responses short, clear, and friendly (max 3-4 sentences).
+- Prefer simple Vietnamese words.
+
 Context:
-- User meal history (last 7 days - format 'Date: [Food IDs]'):
+- User meal history (last 7 days):
 ${historySummary}
-(Note: Food IDs are internal, just ensure the current selection isn't a direct repetition of recent exact matches if possible, or just focus on the current selection's balance).
 - Today selected dishes: 
 ${selectedFoods.map(f => `- ${f.name} (${f.price} VND, type: ${f.type})`).join('\n')}
 - Budget constraints: ${budget} VND (Total: ${selectedFoods.reduce((sum, f) => sum + (f.price || 0), 0)} VND)
 
 Task:
-Explain briefly why these dishes are suitable today.
-Do NOT suggest new dishes unless asked.
-Respond in Vietnamese.
-Limit to 3–4 sentences.
-Tone: Friendly, helpful.
+Explain briefly why these dishes are suitable today based on the context.
+Tone: Friendly, calm, encouraging.
 `;
 
     const result = await model.generateContent(prompt);
@@ -85,22 +92,22 @@ export async function suggestNewDishes(existingFoods: Food[]) {
     const existingNames = existingFoods.map(f => f.name.toLowerCase()).join(', ');
 
     const prompt = `
-You are a Vietnamese food suggestion assistant.
+You are a supportive Vietnamese food suggestion assistant.
+
+Strict rules:
+- Do NOT give medical or health advice.
+- Suggest 5 NEW dishes (not in existing dishes).
+- Dishes must be common Vietnamese home-cooked meals.
+- Output JSON array only.
 
 Context:
 - Existing dishes to AVOID: ${existingNames}
 
-Rules:
-- Suggest 5 NEW dishes (not in existing dishes).
-- Dishes must be common Vietnamese home-cooked meals.
-- Do NOT include expensive or rare ingredients.
-- Output JSON array only.
-- Keys: 
+Output JSON Keys: 
   - name: string (Vietnamese name of dish)
   - type: string ('CHINH' for main dish, 'PHU' for side dish/soup/vegetables)
-  - tags: string (comma separated ingredients/attributes, e.g. 'heo, kho')
-  - description: string (very short description of what it is)
-- Do NOT include prices (I will set them later).
+  - tags: string (comma separated ingredients, e.g. 'heo, kho')
+  - description: string (very short description)
 `;
 
     const result = await model.generateContent(prompt);
@@ -130,26 +137,20 @@ export async function replaceDish(
     });
 
     const prompt = `
-You are a Vietnamese food replacement assistant.
+You are a supportive Vietnamese food replacement assistant.
 
 Strict rules:
-- Replace ONLY the target dish
-- Do NOT modify other dishes
-- Do NOT exceed remainingBudget
-- Suggest dishes with the SAME type as target dish
-- Avoid dishes with tags listed in avoidTags
-- Avoid dishes appearing in recentMainDishIds
-- Choose common Vietnamese home meals
-- Do NOT explain anything
-- Output ONLY valid JSON of the single replacement dish
+- Replace ONLY the target dish.
+- Do NOT give medical or health advice.
+- Choose common Vietnamese home meals.
+- Output ONLY valid JSON of the single replacement dish.
 
 Context:
 - Target Dish to Replace: ${JSON.stringify(targetDish)}
 - Current Meal: ${JSON.stringify(currentMeal.map(f => ({ name: f.name, price: f.price })))}
 - Total Budget: ${budget}
-- Remaining Budget for this dish (approx): ${budget - currentMeal.filter(f => f.id !== targetDish.id).reduce((s, f) => s + (f.price || 0), 0)}
 - Avoid Tags: ${JSON.stringify(avoidTags)}
-- Recent Main Dish IDs (avoid names if possible): ${JSON.stringify(recentMainDishIds)}
+- Recent Main Dish IDs: ${JSON.stringify(recentMainDishIds)}
 
 Output JSON Structure:
 {
@@ -199,22 +200,26 @@ export async function analyzeFoodHabits() {
     }).join('\n');
 
     const prompt = `
-You are a Vietnamese food habit analysis assistant.
+You are a supportive Vietnamese food habit analysis assistant.
+
+Core principles:
+- You ONLY explain, summarize based on provided data.
+- Do NOT invent data.
 
 Strict rules:
-- Do NOT give medical or health advice
-- Do NOT judge or criticize the user
-- Do NOT suggest specific dishes
-- Only analyze patterns and balance (e.g. eating too much fried food, good variety, repeating dishes)
-- Use friendly, encouraging Vietnamese tone
-- Keep the report short (max 150 words) and practical
+- Do NOT give medical or health advice.
+- Do NOT judge, criticize, or pressure the user.
+- Do NOT suggest specific dishes unless necessary for variety examples.
+- Use friendly, encouraging Vietnamese tone.
+- Keep the report short (max 150 words) and practical.
+- If history is empty or insufficient, say so politely.
 
 Context:
 User's recent meal history (last 30 entries):
 ${historyText}
 
 Output:
-A text response analyzing the habits.
+A friendly text response analyzing the habits (patterns, variety, balance) without being preachy.
 `;
 
     const result = await model.generateContent(prompt);
