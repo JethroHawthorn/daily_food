@@ -30,10 +30,11 @@ export async function createFood(formData: FormData) {
   const name = formData.get('name') as string;
   const type = formData.get('type') as string;
   const price = formData.get('price') ? Number(formData.get('price')) : null;
+  const tags = formData.get('tags') as string; // Stored as comma separated or raw text
   
   await db.execute({
-    sql: 'INSERT INTO foods (name, type, price) VALUES (?, ?, ?)',
-    args: [name, type, price]
+    sql: 'INSERT INTO foods (name, type, price, tags) VALUES (?, ?, ?, ?)',
+    args: [name, type, price, tags]
   });
   
   revalidatePath('/foods');
@@ -44,10 +45,11 @@ export async function updateFood(id: number, formData: FormData) {
   const name = formData.get('name') as string;
   const type = formData.get('type') as string;
   const price = formData.get('price') ? Number(formData.get('price')) : null;
+  const tags = formData.get('tags') as string;
   
   await db.execute({
-    sql: 'UPDATE foods SET name = ?, type = ?, price = ? WHERE id = ?',
-    args: [name, type, price, id]
+    sql: 'UPDATE foods SET name = ?, type = ?, price = ?, tags = ? WHERE id = ?',
+    args: [name, type, price, tags, id]
   });
   
   revalidatePath('/foods');

@@ -26,6 +26,11 @@ export default function CreateFoodPage() {
         </div>
         
         <div>
+          <label className="block text-sm font-medium mb-1">Tags (cách nhau bởi dấu phẩy)</label>
+          <Input name="tags" placeholder="Ví dụ: trung, thit, ca" />
+        </div>
+        
+        <div>
           <label className="block text-sm font-medium mb-1">Giá (VNĐ)</label>
           <Input name="price" type="number" placeholder="0" min="0" step="1000" />
         </div>

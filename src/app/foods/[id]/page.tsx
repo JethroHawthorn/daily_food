@@ -40,7 +40,12 @@ export default async function EditFoodPage({ params }: { params: { id: string } 
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-1">Giá (VNĐ)</label>
+          <label className="block text-sm font-medium mb-1">Tags</label>
+          <Input name="tags" defaultValue={food.tags || ''} placeholder="Ví dụ: trung, thit" />
+        </div>
+
+        <div>
+           <label className="block text-sm font-medium mb-1">Giá (VNĐ)</label>
           <Input name="price" type="number" defaultValue={food.price || ''} min="0" step="1000" />
         </div>
         
