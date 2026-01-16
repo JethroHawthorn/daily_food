@@ -1,6 +1,7 @@
 import { getMealHistory, getAllFoods } from '@/lib/data';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import AnalysisComponent from '@/components/analysis-component';
 
 export const revalidate = 0; // Always fresh
 
@@ -13,8 +14,12 @@ export default async function HistoryPage() {
 
   return (
     <div className="container mx-auto p-4 max-w-md">
-      <h1 className="text-2xl font-bold mb-6 text-center">📜 Lịch Sử Ăn Uống</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">📜 Lịch Sử Ăn Uống</h1>
       
+      <div className="mb-6">
+        <AnalysisComponent />
+      </div>
+
       <div className="space-y-6 relative border-l-2 border-orange-200 ml-4 pl-6 pb-4">
         {history.map((record) => {
           const foodIds = JSON.parse(record.food_ids) as number[];

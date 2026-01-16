@@ -170,3 +170,58 @@ Output JSON Structure:
     return null;
   }
 }
+// ... existing exports
+
+export async function analyzeFoodHabits() {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("Chưa cấu hình API Key cho AI.");
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    
+    // Fetch data
+    const history = await getMealHistory(30); // Last 30 entries
+    const allFoods = await import('@/lib/data').then(m => m.getAllFoods()); // Dynamic import to avoid circular dep if any
+    const foodMap = new Map(allFoods.map(f => [f.id, f]));
+
+    if (history.length === 0) {
+      return "Bạn chưa có lịch sử ăn uống nào để phân tích. Hãy quay thử vài món nhé!";
+    }
+
+    // Process history into readable text
+    const historyText = history.map(h => {
+      const foods = (JSON.parse(h.food_ids) as number[])
+        .map(id => foodMap.get(id)?.name)
+        .filter(Boolean)
+        .join(', ');
+      return `- ${new Date(h.date).toLocaleDateString('vi-VN')}: ${foods}`;
+    }).join('\n');
+
+    const prompt = `
+You are a Vietnamese food habit analysis assistant.
+
+Strict rules:
+- Do NOT give medical or health advice
+- Do NOT judge or criticize the user
+- Do NOT suggest specific dishes
+- Only analyze patterns and balance (e.g. eating too much fried food, good variety, repeating dishes)
+- Use friendly, encouraging Vietnamese tone
+- Keep the report short (max 150 words) and practical
+
+Context:
+User's recent meal history (last 30 entries):
+${historyText}
+
+Output:
+A text response analyzing the habits.
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Gemini Analyze Error:", error);
+    return "AI đang bận, vui lòng thử lại sau.";
+  }
+}

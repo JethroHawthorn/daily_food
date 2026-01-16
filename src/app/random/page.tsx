@@ -10,7 +10,7 @@ import { generateRandomMeal } from '@/lib/random-engine';
 import { getOfflineFoods, getOfflineHistory } from '@/hooks/use-offline-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { ChefHat, RefreshCw, Loader2 } from 'lucide-react';
+import { ChefHat, RefreshCw, Loader2, Check, RotateCcw, Home } from 'lucide-react';
 
 interface Food {
   id: number;
@@ -313,23 +313,35 @@ export default function RandomPage() {
 
           <div className="space-y-3">
             <form action={handleSave}>
-               <Button type="submit" className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-green-200 shadow-lg rounded-xl" disabled={!!result.isOffline}>
-                 {result.isOffline ? '❌ Online để lưu' : '✅ Chốt Đơn Này'}
+               <Button type="submit" className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-green-200 shadow-lg rounded-xl flex items-center justify-center gap-2" disabled={!!result.isOffline}>
+                 {result.isOffline ? (
+                    <>
+                        <span>❌</span>
+                        <span>Online để lưu</span>
+                    </>
+                 ) : (
+                    <>
+                        <Check className="w-5 h-5" />
+                        <span>Chốt Đơn Này</span>
+                    </>
+                 )}
                </Button>
             </form>
             
             <Button 
                 variant="outline" 
                 onClick={() => setResult(null)}
-                className="w-full h-12 text-base font-semibold border-orange-200 text-orange-700 hover:bg-orange-50 rounded-xl"
+                className="w-full h-12 text-base font-semibold border-orange-200 text-orange-700 hover:bg-orange-50 rounded-xl flex items-center justify-center gap-2"
             >
-                🔄 Quay Lại
+                <RotateCcw className="w-5 h-5" />
+                <span>Quay Lại</span>
             </Button>
             
-            <div className="text-center pt-2">
+            <div className="flex justify-center pt-2 w-full">
                  <Link href="/">
-                    <Button variant="outline" className="text-gray-500 border-dashed border-gray-300 hover:border-orange-300 hover:text-orange-600">
-                        🏠 Về Trang Chủ
+                    <Button variant="outline" className="text-gray-500 border-dashed border-gray-300 hover:border-orange-300 hover:text-orange-600 flex items-center justify-center gap-2">
+                        <Home className="w-4 h-4" />
+                        <span>Về Trang Chủ</span>
                     </Button>
                  </Link>
             </div>
@@ -339,9 +351,12 @@ export default function RandomPage() {
       </AnimatePresence>
       
       {!result && (
-        <div className="mt-8 text-center">
+        <div className="mt-8 flex justify-center w-full">
             <Link href="/">
-              <Button variant="outline">🏠 Về Trang Chủ</Button>
+              <Button variant="outline" className="flex items-center justify-center gap-2">
+                <Home className="w-4 h-4" />
+                <span>Về Trang Chủ</span>
+              </Button>
             </Link>
         </div>
       )}
