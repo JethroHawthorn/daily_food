@@ -70,3 +70,44 @@ Tone: Friendly, helpful.
     return "Xin lỗi, AI đang bận nấu ăn nên chưa thể giải thích lúc này.";
   }
 }
+
+export async function suggestNewDishes(existingFoods: Food[]) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("Chưa cấu hình API Key cho AI.");
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-flash-latest",
+        generationConfig: { responseMimeType: "application/json" }
+    });
+
+    const existingNames = existingFoods.map(f => f.name.toLowerCase()).join(', ');
+
+    const prompt = `
+You are a Vietnamese food suggestion assistant.
+
+Context:
+- Existing dishes to AVOID: ${existingNames}
+
+Rules:
+- Suggest 5 NEW dishes (not in existing dishes).
+- Dishes must be common Vietnamese home-cooked meals.
+- Do NOT include expensive or rare ingredients.
+- Output JSON array only.
+- Keys: 
+  - name: string (Vietnamese name of dish)
+  - type: string ('CHINH' for main dish, 'PHU' for side dish/soup/vegetables)
+  - tags: string (comma separated ingredients/attributes, e.g. 'heo, kho')
+  - description: string (very short description of what it is)
+- Do NOT include prices (I will set them later).
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return JSON.parse(response.text());
+  } catch (error) {
+    console.error("Gemini Suggest Error:", error);
+    return [];
+  }
+}

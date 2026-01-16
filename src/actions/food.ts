@@ -15,7 +15,8 @@ export interface Food {
 
 export async function getFoods(): Promise<Food[]> {
   const result = await db.execute('SELECT * FROM foods ORDER BY id DESC');
-  return result.rows as unknown as Food[];
+  // Serialize to plain object to pass to client component
+  return JSON.parse(JSON.stringify(result.rows)) as Food[];
 }
 
 export async function getFood(id: number): Promise<Food | undefined> {

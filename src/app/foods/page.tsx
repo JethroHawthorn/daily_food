@@ -2,6 +2,7 @@ import { getFoods, deleteFood } from "@/actions/food";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { FoodList } from "@/components/food-list";
+import { AISuggestion } from "@/components/ai-suggestion";
 
 export default async function FoodsPage() {
   const foods = await getFoods();
@@ -14,6 +15,8 @@ export default async function FoodsPage() {
           <Button>+ Thêm món</Button>
         </Link>
       </div>
+
+      <AISuggestion existingFoods={foods} />
 
       <FoodList initialFoods={foods} />
 
