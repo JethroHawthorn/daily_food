@@ -18,6 +18,12 @@ export default function Home() {
             🗂️ Quản Lý Món Ăn
           </Button>
         </Link>
+        
+        <Link href="/history" className="w-full">
+          <Button variant="secondary" className="w-full text-xl py-6 h-auto font-semibold bg-gray-100 hover:bg-gray-200 text-gray-800">
+            📜 Lịch Sử Ăn Uống
+          </Button>
+        </Link>
       </div>
     </main>
   );

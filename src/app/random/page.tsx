@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import Link from 'next/link';
+import { generateRandomMeal } from '@/lib/random-engine';
+import { getOfflineFoods, getOfflineHistory } from '@/hooks/use-offline-data';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Need to duplicate Food interface or import it effectively if it was a plain object
 interface Food {
@@ -19,6 +22,7 @@ interface RandomResult {
   foods: Food[];
   totalPrice: number;
   relaxedInfo?: string[];
+  isOffline?: boolean;
 }
 
 export default function RandomPage() {
@@ -30,16 +34,38 @@ export default function RandomPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    
+    const budget = Number(formData.get('budget')) || 70000;
+
     try {
+      // Try Server Action first
       const res = await randomMeal(formData);
       if (res) {
         setResult(res);
       } else {
-        setError('Không tìm thấy thực đơn phù hợp! Hãy thử tăng ngân sách hoặc thêm món ăn.');
+        setError('Không tìm thấy thực đơn phù hợp (Online).');
       }
     } catch (e) {
-      setError('Đã xảy ra lỗi hệ thống.');
-      console.error(e);
+      console.log('Online failed, trying offline...', e);
+      // Fallback to offline
+      const offlineFoods = getOfflineFoods();
+      const offlineHistory = getOfflineHistory();
+      
+      if (offlineFoods.length === 0) {
+        setError('Mất kết nối và chưa có dữ liệu offline. Hãy kết nối mạng để tải dữ liệu.');
+      } else {
+        const offlineRes = generateRandomMeal(offlineFoods, offlineHistory, {
+           budget,
+           mainDishCount: 1,
+           sideDishCount: 1
+        });
+        
+        if (offlineRes) {
+          setResult({ ...offlineRes, isOffline: true });
+        } else {
+           setError('Không tìm thấy thực đơn phù hợp (Offline).');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -50,7 +76,8 @@ export default function RandomPage() {
     try {
       await saveSelection(result.foods.map(f => f.id));
     } catch (e) {
-      console.error(e);
+      console.error('Save failed', e);
+      alert('Không thể lưu khi mất mạng (tính năng lưu offline chưa hỗ trợ).');
     }
   }
 
@@ -63,21 +90,36 @@ export default function RandomPage() {
           <label className="block text-sm font-medium mb-1">Ngân sách (VNĐ)</label>
           <Input name="budget" type="number" defaultValue="70000" step="1000" />
         </div>
-        <Button type="submit" className="w-full h-12 text-lg bg-orange-500 hover:bg-orange-600" disabled={loading}>
+        <Button type="submit" className="w-full h-12 text-lg bg-orange-500 hover:bg-orange-600 transition-all active:scale-95" disabled={loading}>
           {loading ? 'Đang quay...' : 'QUAY NGAY'}
         </Button>
       </form>
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-600 rounded-lg mb-4 text-center">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-red-50 text-red-600 rounded-lg mb-4 text-center"
+        >
           {error}
-        </div>
+        </motion.div>
       )}
 
+      <AnimatePresence>
       {result && (
-        <div className="border-2 border-green-500 rounded-xl p-4 bg-green-50 shadow-lg animate-in fade-in zoom-in duration-300">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="border-2 border-green-500 rounded-xl p-4 bg-green-50 shadow-lg"
+        >
           <h2 className="text-xl font-bold text-center mb-4 text-green-800">🎉 Thực Đơn Hôm Nay</h2>
           
+           {result.isOffline && (
+             <div className="mb-4 p-2 bg-gray-200 text-gray-700 text-sm rounded text-center">
+               📡 Chế độ Offline (Dữ liệu cũ)
+             </div>
+          )}
+
           {result.relaxedInfo && result.relaxedInfo.length > 0 && (
              <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 text-sm rounded">
                ⚠️ {result.relaxedInfo.join(', ')}
@@ -86,7 +128,13 @@ export default function RandomPage() {
 
           <div className="space-y-3 mb-6">
             {result.foods.map((food, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-white p-3 rounded shadow-sm">
+              <motion.div 
+                key={idx} 
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: idx * 0.1 }}
+                className="flex justify-between items-center bg-white p-3 rounded shadow-sm"
+              >
                 <div>
                   <div className="font-bold flex items-center gap-2">
                     {food.type === 'CHINH' ? '🍚' : '🥗'} {food.name}
@@ -96,7 +144,7 @@ export default function RandomPage() {
                 <div className="font-medium text-green-600">
                   {food.price ? food.price.toLocaleString() : 0}đ
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -106,12 +154,13 @@ export default function RandomPage() {
           </div>
 
           <form action={handleSave}>
-             <Button type="submit" className="w-full h-12 text-lg font-bold">
-               ✅ Chốt Đơn Này
+             <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={!!result.isOffline}>
+               {result.isOffline ? '❌ Online để lưu' : '✅ Chốt Đơn Này'}
              </Button>
           </form>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
       
       <div className="mt-8 text-center">
         <Link href="/">

@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export default async function EditFoodPage({ params }: { params: { id: string } }) {
-  const food = await getFood(Number(params.id));
+export default async function EditFoodPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const food = await getFood(Number(id));
   
   if (!food) {
     notFound();
