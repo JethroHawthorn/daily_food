@@ -17,7 +17,6 @@ interface Food {
   name: string;
   type: string;
   price: number | null;
-  image: string | null;
   tags: string | null;
 }
 

@@ -157,8 +157,7 @@ Output JSON Structure:
   "name": "string",
   "type": "${targetDish.type}",
   "price": number,
-  "tags": "string",
-  "image": null
+  "tags": "string"
 }
 `;
 
