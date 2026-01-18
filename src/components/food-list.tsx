@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Edit, Search } from 'lucide-react';
 import { deleteFood, Food } from '@/actions/food';
+import { getFoodIcon } from '@/lib/utils';
 
 export function FoodList({ initialFoods }: { initialFoods: Food[] }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,7 +84,10 @@ export function FoodList({ initialFoods }: { initialFoods: Food[] }) {
         {filteredFoods.map((food) => (
           <div key={food.id} className="group border border-orange-100 p-4 rounded-xl shadow-sm flex justify-between items-center bg-white hover:shadow-md hover:border-orange-300 transition-all">
             <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-lg text-orange-950 truncate">{food.name}</h3>
+              <h3 className="font-bold text-lg text-orange-950 truncate flex items-center gap-2">
+                <span className="text-2xl">{getFoodIcon(food.name, food.type)}</span>
+                {food.name}
+              </h3>
               <div className="text-sm text-gray-500 flex flex-wrap gap-2 items-center mt-1">
                 <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                   food.type === 'CHINH' ? 'bg-orange-100 text-orange-700' : 

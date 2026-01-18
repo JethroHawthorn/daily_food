@@ -106,6 +106,7 @@ Context:
 Output JSON Keys: 
   - name: string (Vietnamese name of dish)
   - type: string ('CHINH' for main dish, 'PHU' for side dish/soup/vegetables)
+  - price: number (Estimated street price in VND, e.g. 35000, 50000)
   - tags: string (comma separated ingredients, e.g. 'heo, kho')
   - description: string (very short description)
 `;

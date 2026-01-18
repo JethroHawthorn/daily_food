@@ -51,7 +51,12 @@ export function AISuggestion({ existingFoods }: { existingFoods: Food[] }) {
                {suggestions.map((dish, idx) => (
                  <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
                     <div>
-                        <div className="font-bold text-indigo-900">{dish.name}</div>
+                        <div className="font-bold text-indigo-900 flex items-center gap-2">
+                           {dish.name}
+                           <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100">
+                             {dish.price?.toLocaleString()}đ
+                           </span>
+                        </div>
                         <div className="text-xs text-gray-500">{dish.description}</div>
                         <div className="text-xs text-indigo-400 mt-1 uppercase font-semibold">{dish.type}</div>
                     </div>
@@ -59,7 +64,7 @@ export function AISuggestion({ existingFoods }: { existingFoods: Food[] }) {
                         const formData = new FormData();
                         formData.set('name', dish.name);
                         formData.set('type', dish.type);
-                        formData.set('price', '0'); 
+                        formData.set('price', (dish.price || 0).toString()); 
                         formData.set('tags', dish.tags);
                         await createFood(formData);
                         // Remove from list

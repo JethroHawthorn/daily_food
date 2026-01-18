@@ -11,6 +11,7 @@ import { getOfflineFoods, getOfflineHistory } from '@/hooks/use-offline-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { ChefHat, RefreshCw, Loader2, Check, RotateCcw, Home } from 'lucide-react';
+import { getFoodIcon } from '@/lib/utils';
 
 interface Food {
   id: number;
@@ -254,7 +255,7 @@ export default function RandomPage() {
               >
                 <div>
                   <div className="font-bold text-lg text-gray-800 flex items-center gap-3">
-                    <span className="text-2xl">{food.type === 'CHINH' ? '🍚' : '🥗'}</span>
+                    <span className="text-2xl">{getFoodIcon(food.name, food.type)}</span>
                     {food.name}
                   </div>
                   <div className="text-xs text-gray-400 pl-9 uppercase font-semibold tracking-wide">{food.type}</div>
