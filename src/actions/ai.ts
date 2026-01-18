@@ -120,6 +120,44 @@ Output JSON Keys:
   }
 }
 
+export async function suggestDishesFromIngredients(ingredients: string) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("Chưa cấu hình API Key cho AI.");
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-flash-latest",
+        generationConfig: { responseMimeType: "application/json" }
+    });
+
+    const prompt = `
+You are a supportive Vietnamese food suggestion assistant.
+
+Strict rules:
+- Do NOT give medical or health advice.
+- Suggest 3-5 dishes that primarily use these ingredients: "${ingredients}".
+- Dishes must be common Vietnamese home-cooked meals.
+- Output JSON array only.
+
+Output JSON Keys: 
+  - name: string (Vietnamese name of dish)
+  - type: string ('CHINH' for main dish, 'PHU' for side dish/soup/vegetables)
+  - price: number (Estimated street price in VND, e.g. 35000)
+  - tags: string (comma separated ingredients, e.g. 'heo, kho')
+  - description: string (very short description explaining how it uses the ingredients)
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return JSON.parse(response.text());
+  } catch (error) {
+    console.error("Gemini Ingredient Suggest Error:", error);
+    return [];
+  }
+}
+
+
 export async function replaceDish(
   targetDish: Food,
   currentMeal: Food[],

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { suggestNewDishes } from '@/actions/ai';
+import { suggestNewDishes, suggestDishesFromIngredients } from '@/actions/ai';
 import { createFood, Food } from '@/actions/food';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,33 +20,86 @@ export function AISuggestion({ existingFoods }: { existingFoods: Food[] }) {
       setSuggestions(result);
     } catch (e) {
       console.error(e);
-      setSuggestions([]); // Error state could be better
+      setSuggestions([]); 
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleIngredientSuggest(ingredients: string) {
+    setLoading(true);
+    setSuggestions([]);
+    try {
+       const result = await suggestDishesFromIngredients(ingredients);
+       setSuggestions(result);
+    } catch (e) {
+       console.error(e);
+       setSuggestions([]);
+    } finally {
+       setLoading(false);
+    }
+  }
+
   return (
     <div className="mb-6">
-      <Button 
-        onClick={handleSuggest} 
-        disabled={loading}
-        className="w-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 border-dashed mb-4"
-      >
-        {loading ? 'AI đang tìm món mới...' : '✨ Gợi ý món mới chưa có'}
-      </Button>
+      <div className="flex gap-2 mb-4">
+        <Button 
+            onClick={handleSuggest} 
+            disabled={loading}
+            variant="outline"
+            className="flex-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200 border-dashed"
+        >
+            {loading && !isOpen ? '...' : '✨ Món mới'}
+        </Button>
+        <Button 
+            onClick={() => setIsOpen(!isOpen)} 
+            disabled={loading}
+            variant="outline"
+            className="flex-1 bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200 border-dashed"
+        >
+            🥕 Nguyên liệu
+        </Button>
+      </div>
 
       <AnimatePresence>
-        {isOpen && (suggestions.length > 0 || loading) && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
-               <h3 className="font-bold text-gray-700">Gợi ý từ AI:</h3>
-               {loading && <p className="text-sm text-gray-400 italic">Đang suy nghĩ...</p>}
+        {isOpen && (
+            <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden mb-4"
+            >
+                <div className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
+                    <h3 className="font-bold text-gray-700">Gợi ý từ AI:</h3>
+                    
+                    {/* Ingredient Input Area */}
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="Nhập nguyên liệu (vd: trứng, cà chua)..."
+                            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                            id="ingredient-input"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const val = e.currentTarget.value;
+                                    if(val) handleIngredientSuggest(val);
+                                }
+                            }}
+                        />
+                        <Button 
+                            size="sm"
+                            onClick={() => {
+                                const input = document.getElementById('ingredient-input') as HTMLInputElement;
+                                if(input?.value) handleIngredientSuggest(input.value);
+                            }}
+                            disabled={loading}
+                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                        >
+                            Tìm
+                        </Button>
+                    </div>
+
+                    {loading && <p className="text-sm text-gray-400 italic">AI đang suy nghĩ...</p>}
                
                {suggestions.map((dish, idx) => (
                  <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
