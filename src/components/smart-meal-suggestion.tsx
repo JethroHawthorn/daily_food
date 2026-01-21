@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Food } from '@/actions/food';
-import { getSmartMealRecommendations, getWeatherInfo } from '@/actions/ai';
+import { getSmartMealRecommendations, getWeatherInfo, saveSmartSelection } from '@/actions/ai';
 import { CloudSun, Info, Loader2, ThermometerSun } from 'lucide-react';
 
 interface Props {
@@ -20,6 +20,8 @@ export function SmartMealSuggestion({ foods }: Props) {
   const [conditions, setConditions] = useState<string[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
   const [mode, setMode] = useState('');
+  const [region, setRegion] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     getWeatherInfo().then(setWeather);
@@ -36,7 +38,8 @@ export function SmartMealSuggestion({ foods }: Props) {
         goal,
         conditions,
         otherNotes,
-        mode
+        mode,
+        region
       });
       setSuggestions(res);
     } catch (error) {
@@ -100,6 +103,29 @@ export function SmartMealSuggestion({ foods }: Props) {
                         }`}
                     >
                         {m.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Khẩu vị miền</label>
+            <div className="flex gap-2">
+                {[
+                    { val: 'north', label: 'Miền Bắc' },
+                    { val: 'central', label: 'Miền Trung' },
+                    { val: 'south', label: 'Miền Nam' }
+                ].map((r) => (
+                    <button
+                        key={r.val}
+                        onClick={() => setRegion(r.val === region ? '' : r.val)}
+                        className={`text-xs py-1.5 px-3 rounded-full border transition-all ${
+                            region === r.val
+                            ? 'bg-red-50 border-red-200 text-red-700 font-bold ring-2 ring-red-100'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                    >
+                        {r.label}
                     </button>
                 ))}
             </div>
@@ -173,10 +199,17 @@ export function SmartMealSuggestion({ foods }: Props) {
       </div>
 
       {/* Results */}
-      <div className="space-y-3">
+      <div className={`space-y-3 ${selectedIds.length > 0 ? 'pb-24' : ''}`}>
         {suggestions.map((item, idx) => {
             const food = foods.find(f => f.id === item.food_id);
             if (!food) return null; // Should not happen
+
+            const confidencePercent = Math.round((item.confidence_score || 0) * 100);
+            const getConfidenceColor = (score: number) => {
+                if (score >= 0.8) return 'text-green-600 bg-green-50 border-green-200';
+                if (score >= 0.5) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                return 'text-gray-500 bg-gray-50 border-gray-200';
+            }
 
             return (
                 <motion.div
@@ -188,19 +221,76 @@ export function SmartMealSuggestion({ foods }: Props) {
                 >
                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
                     <div className="flex-1">
-                        <div className="text-lg font-extrabold text-gray-800">{food.name}</div>
+                        <div className="flex justify-between items-start">
+                             <div className="text-lg font-extrabold text-gray-800">{food.name}</div>
+                             {item.confidence_score && (
+                                <div className={`text-xs px-2 py-0.5 rounded-full border font-bold ${getConfidenceColor(item.confidence_score)}`}>
+                                    {confidencePercent}% Match
+                                </div>
+                             )}
+                        </div>
                         <div className="text-indigo-600 text-sm font-medium mb-1">
                              {food.price?.toLocaleString()}đ <span className='text-gray-300'>•</span> {food.type}
                         </div>
-                        <div className="text-gray-500 text-xs bg-indigo-50 p-2 rounded-lg mt-2 italic flex gap-2 items-start">
-                             <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                             {item.reason}
+                        <div className="text-gray-500 text-xs bg-indigo-50 p-2 rounded-lg mt-2 italic">
+                             <div className="flex gap-2 items-start">
+                                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                                {item.reason}
+                             </div>
+                             {item.confidence_reason && (
+                                <div className="mt-1 pl-5 text-indigo-400 opacity-80">
+                                   ℹ️ {item.confidence_reason}
+                                </div>
+                             )}
+                        </div>
+                        <div className="mt-3">
+                            <Button 
+                                size="sm" 
+                                variant={selectedIds.includes(food.id) ? "default" : "outline"}
+                                className={`w-full transition-all ${
+                                    selectedIds.includes(food.id)
+                                    ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
+                                    : "border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+                                }`}
+                                onClick={() => {
+                                    if (selectedIds.includes(food.id)) {
+                                        setSelectedIds(prev => prev.filter(id => id !== food.id));
+                                    } else {
+                                        setSelectedIds(prev => [...prev, food.id]);
+                                    }
+                                }}
+                            >
+                                {selectedIds.includes(food.id) ? "✓ Đã chọn" : "Chọn món này"}
+                            </Button>
                         </div>
                     </div>
                 </motion.div>
             )
         })}
       </div>
+
+      {/* Confirm Selection Button */}
+      {selectedIds.length > 0 && (
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed bottom-6 left-0 right-0 px-4 z-50 flex justify-center"
+        >
+            <div className="bg-white p-2 rounded-2xl shadow-xl border border-indigo-100 w-full max-w-md flex items-center justify-between pl-4">
+                <span className="text-sm font-semibold text-gray-700">Đã chọn {selectedIds.length} món</span>
+                <Button 
+                    onClick={() => {
+                        if (confirm(`Xác nhận lưu ${selectedIds.length} món vào lịch sử?`)) {
+                            saveSmartSelection(selectedIds);
+                        }
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-200"
+                >
+                    Lưu vào lịch sử
+                </Button>
+            </div>
+        </motion.div>
+      )}
     </div>
   );
 }

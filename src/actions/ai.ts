@@ -1,8 +1,11 @@
 'use server';
     
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getMealHistory } from '@/lib/data';
+import { getMealHistory, saveMealHistory } from '@/lib/data';
 import { Food } from '@/actions/food';
+import { getUserId } from '@/actions/auth';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -278,6 +281,7 @@ export async function getSmartMealRecommendations(
     conditions: string[]; 
     otherNotes?: string;
     mode?: string;
+    region?: string;
   }
 ) {
   if (!process.env.GEMINI_API_KEY) {
@@ -315,7 +319,7 @@ export async function getSmartMealRecommendations(
     })));
 
     const prompt = `
-You are a smart Vietnamese food recommendation engine.
+You are a smart Vietnamese food recommendation engine with strict safety guardrails.
 
 Context:
 - Season: ${season}
@@ -323,23 +327,31 @@ Context:
 - User Health Goal: ${healthContext.goal}
 - User Conditions: ${healthContext.conditions.join(', ')}
 - Other Health Notes: ${healthContext.otherNotes || "None"}
-- Selected Mode: ${healthContext.mode || "Normal"} (Prioritize this: Quick=fast, Budget=cheap, Comfort=warm/rich, Healthy=balanced)
+- Selected Mode: ${healthContext.mode || "Normal"}
+- Region/Taste: ${healthContext.region || "General"}
 - Recent History IDs (Avoid if possible): ${JSON.stringify(recentMealIds)}
 
 Candidate Meals:
 ${foodListJson}
 
+Guardrails (CRITICAL):
+1. NO medical advice. If "Other Health Notes" sounds serious (e.g., chest pain), ignore it or suggest checking with a doctor in the "confidence_reason".
+2. NO harmful content.
+3. Be culturally strict about "Region": Northern hints (lighter, salty), Central (spicy, salty), Southern (sweet, spicy).
+
 Task:
 1. Select top 3 most suitable meals.
-2. STRICTLY penalize repetition (avoid meals in Recent History).
-3. Prioritize based on the Selected Mode and Health Context.
-4. Explain WHY in Vietnamese (briefly, mention weather/mode/health why it matches).
+2. STRICTLY penalize repetition.
+3. Calculate 'confidence_score' (0.0 - 1.0) based on how well the meal fits ALL criteria (weather, health, mode, region).
+4. Explain WHY in Vietnamese.
 
 Output JSON Array:
 [
   {
     "food_id": number,
-    "reason": "string"
+    "reason": "string (Why matching?)",
+    "confidence_score": number (0.0 to 1.0),
+    "confidence_reason": "string (Why this score? e.g. 'Perfect match for chilly weather' or 'Low score because limited options')"
   }
 ]
 `;
@@ -362,4 +374,14 @@ export async function getWeatherInfo() {
     ...weather,
     season
   };
+}
+
+export async function saveSmartSelection(foodIds: number[]) {
+  const userId = await getUserId();
+  if (!userId) throw new Error('Unauthorized');
+  
+  await saveMealHistory(foodIds);
+  revalidatePath('/');
+  revalidatePath('/history');
+  redirect('/history');
 }
