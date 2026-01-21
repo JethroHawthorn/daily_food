@@ -268,3 +268,80 @@ A friendly text response analyzing the habits (patterns, variety, balance) witho
     return "AI đang bận, vui lòng thử lại sau.";
   }
 }
+
+import { getWeather, getCurrentSeason } from '@/lib/weather';
+
+export async function getSmartMealRecommendations(
+  availableFoods: Food[], 
+  healthContext: { goal: string; conditions: string[], otherNotes?: string }
+) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("Chưa cấu hình API Key cho AI.");
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-flash-latest",
+        generationConfig: { responseMimeType: "application/json" }
+    });
+
+    const weather = await getWeather();
+    const season = getCurrentSeason();
+
+    const weatherSummary = weather 
+      ? `${weather.temp_c}°C, ${weather.condition.text}, Humidity: ${weather.humidity}%`
+      : "Unknown (assume average)";
+
+    const foodListJson = JSON.stringify(availableFoods.map(f => ({
+      id: f.id,
+      name: f.name,
+      type: f.type,
+      tags: f.tags
+    })));
+
+    const prompt = `
+You are a smart Vietnamese food recommendation engine.
+
+Context:
+- Season: ${season}
+- Weather: ${weatherSummary}
+- User Health Goal: ${healthContext.goal}
+- User Conditions: ${healthContext.conditions.join(', ')}
+- Other Health Notes: ${healthContext.otherNotes || "None"}
+
+Candidate Meals:
+${foodListJson}
+
+Task:
+1. Select top 3 most suitable meals from the candidates based on weather, season, and health context (especially any 'Other Health Notes').
+2. If no perfect match, choose the best available.
+3. Explain WHY in Vietnamese (briefly).
+
+Output JSON Array:
+[
+  {
+    "food_id": number,
+    "reason": "string (Why this is good for today's weather/health)"
+  }
+]
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return JSON.parse(response.text());
+  } catch (error) {
+    console.error("Gemini Smart Suggest Error:", error);
+    return [];
+  }
+}
+
+export async function getWeatherInfo() {
+  const weather = await getWeather();
+  const season = getCurrentSeason();
+  if (!weather) return null;
+  
+  return {
+    ...weather,
+    season
+  };
+}

@@ -29,6 +29,19 @@ export default function Home() {
           </Button>
         </Link>
         
+        {/* Smart Recommendation Card */}
+        <Link href="/smart" className="w-full group">
+          <Button 
+            className="w-full h-auto py-6 text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg shadow-indigo-200 border-none transition-all active:scale-95 flex flex-col gap-1 items-center rounded-2xl"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✨</span>
+              <span>GỢI Ý AI</span>
+            </div>
+            <span className="text-xs font-normal opacity-90 text-white/80">Theo thời tiết & sức khoẻ</span>
+          </Button>
+        </Link>
+
         {/* Manage Foods Card */}
         <Link href="/foods" className="w-full">
           <Button 
