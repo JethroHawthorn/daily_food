@@ -19,6 +19,7 @@ export function SmartMealSuggestion({ foods }: Props) {
   const [goal, setGoal] = useState('maintain');
   const [conditions, setConditions] = useState<string[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
+  const [mode, setMode] = useState('');
 
   useEffect(() => {
     getWeatherInfo().then(setWeather);
@@ -34,7 +35,8 @@ export function SmartMealSuggestion({ foods }: Props) {
       const res = await getSmartMealRecommendations(foods, {
         goal,
         conditions,
-        otherNotes
+        otherNotes,
+        mode
       });
       setSuggestions(res);
     } catch (error) {
@@ -77,6 +79,32 @@ export function SmartMealSuggestion({ foods }: Props) {
 
       {/* Inputs */}
       <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+        
+        <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Chế độ gợi ý</label>
+            <div className="flex flex-wrap gap-2">
+                {[
+                    { val: 'quick', label: '⚡️ Nấu nhanh' },
+                    { val: 'healthy', label: '🥗 Healthy' },
+                    { val: 'comfort', label: '🍲 Comfort Food' },
+                    { val: 'budget', label: '💰 Tiết kiệm' },
+                    { val: 'family', label: '👨‍👩‍👧‍👦 Gia đình' }
+                ].map((m) => (
+                    <button
+                        key={m.val}
+                        onClick={() => setMode(m.val === mode ? '' : m.val)}
+                        className={`text-xs py-1.5 px-3 rounded-full border transition-all ${
+                            mode === m.val
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold ring-2 ring-indigo-100'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                    >
+                        {m.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+
         <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Mục tiêu sức khoẻ</label>
             <div className="grid grid-cols-3 gap-2">

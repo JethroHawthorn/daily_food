@@ -273,7 +273,12 @@ import { getWeather, getCurrentSeason } from '@/lib/weather';
 
 export async function getSmartMealRecommendations(
   availableFoods: Food[], 
-  healthContext: { goal: string; conditions: string[], otherNotes?: string }
+  healthContext: { 
+    goal: string; 
+    conditions: string[]; 
+    otherNotes?: string;
+    mode?: string;
+  }
 ) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("Chưa cấu hình API Key cho AI.");
@@ -287,6 +292,16 @@ export async function getSmartMealRecommendations(
 
     const weather = await getWeather();
     const season = getCurrentSeason();
+    const history = await getMealHistory(7);
+
+    // Filter history to simple ID list
+    const recentMealIds = history.flatMap(h => {
+        try {
+            return JSON.parse(h.food_ids) as number[];
+        } catch {
+            return [];
+        }
+    });
 
     const weatherSummary = weather 
       ? `${weather.temp_c}°C, ${weather.condition.text}, Humidity: ${weather.humidity}%`
@@ -308,20 +323,23 @@ Context:
 - User Health Goal: ${healthContext.goal}
 - User Conditions: ${healthContext.conditions.join(', ')}
 - Other Health Notes: ${healthContext.otherNotes || "None"}
+- Selected Mode: ${healthContext.mode || "Normal"} (Prioritize this: Quick=fast, Budget=cheap, Comfort=warm/rich, Healthy=balanced)
+- Recent History IDs (Avoid if possible): ${JSON.stringify(recentMealIds)}
 
 Candidate Meals:
 ${foodListJson}
 
 Task:
-1. Select top 3 most suitable meals from the candidates based on weather, season, and health context (especially any 'Other Health Notes').
-2. If no perfect match, choose the best available.
-3. Explain WHY in Vietnamese (briefly).
+1. Select top 3 most suitable meals.
+2. STRICTLY penalize repetition (avoid meals in Recent History).
+3. Prioritize based on the Selected Mode and Health Context.
+4. Explain WHY in Vietnamese (briefly, mention weather/mode/health why it matches).
 
 Output JSON Array:
 [
   {
     "food_id": number,
-    "reason": "string (Why this is good for today's weather/health)"
+    "reason": "string"
   }
 ]
 `;
